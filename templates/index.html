@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISL Gesture Recognition System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-hand-paper me-2"></i>
+                ISL Gesture Recognition System
+            </a>
+            <div class="navbar-nav">
+                <span class="nav-link">
+                    <i class="fas fa-signal me-1"></i>
+                    FPS: <span id="fps-counter">--</span>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-3">
+        <div class="row">
+            <!-- Video Feed Column -->
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-video me-2"></i>
+                            Live Camera Feed
+                        </h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="video-container">
+                            <img id="video-stream" 
+                                 src="{{ url_for('video_feed') }}" 
+                                 alt="Video Stream"
+                                 class="img-fluid rounded">
+                            <div class="video-overlay">
+                                <div class="status-indicator" id="camera-status">
+                                    <i class="fas fa-circle text-success"></i>
+                                    Camera Active
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gesture Recognition Results -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-hand-sparkles me-2"></i>
+                            Recognition Results
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="result-item">
+                                    <label>Current Character:</label>
+                                    <div id="current-character" class="display-4 text-primary">--</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="result-item">
+                                    <label>Confidence:</label>
+                                    <div class="progress mt-2">
+                                        <div id="confidence-bar" class="progress-bar bg-success" 
+                                             role="progressbar" style="width: 0%">
+                                            <span id="confidence-text">0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Control Panel Column -->
+            <div class="col-lg-4">
+                <!-- Text Output -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-comment-dots me-2"></i>
+                            Text Output
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <textarea id="sentence-display" 
+                                  class="form-control mb-3" 
+                                  rows="4" 
+                                  placeholder="Recognized text will appear here..."
+                                  readonly></textarea>
+                        
+                        <div class="d-grid gap-2">
+                            <button id="speak-btn" class="btn btn-success btn-lg">
+                                <i class="fas fa-volume-up me-2"></i>
+                                Speak Text
+                            </button>
+                            <button id="clear-btn" class="btn btn-warning">
+                                <i class="fas fa-eraser me-2"></i>
+                                Clear Text
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Word Suggestions -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            Word Suggestions
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="suggestions" class="d-flex flex-wrap gap-2">
+                            <!-- Dynamic suggestions will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Metrics -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Performance
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="metric">
+                                    <div id="avg-fps" class="metric-value">--</div>
+                                    <div class="metric-label">Avg FPS</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="metric">
+                                    <div id="accuracy" class="metric-value">--</div>
+                                    <div class="metric-label">Accuracy</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="metric">
+                                    <div id="latency" class="metric-value">--</div>
+                                    <div class="metric-label">Latency</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gesture Classes -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>
+                            Supported Gestures
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="gesture-classes">
+                            <div class="mb-2">
+                                <strong>Alphabets (26):</strong>
+                                <div class="gesture-grid">
+                                    {% for gesture in gesture_classes[:26] %}
+                                        <span class="badge bg-primary gesture-badge">{{ gesture }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <div>
+                                <strong>Numbers (10):</strong>
+                                <div class="gesture-grid">
+                                    {% for gesture in gesture_classes[26:] %}
+                                        <span class="badge bg-secondary gesture-badge">{{ gesture }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white text-center py-3 mt-4">
+        <div class="container">
+            <p class="mb-0">
+                <i class="fas fa-heart text-danger me-1"></i>
+                Made with love for the deaf and hearing-impaired community
+            </p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
