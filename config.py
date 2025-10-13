@@ -27,9 +27,9 @@ class Config:
     LSTM_MODEL_PATH = os.path.join(MODEL_PATH, 'lstm_model.h5')
     
     # Gesture Recognition Settings
-    CONFIDENCE_THRESHOLD = 0.7
-    HAND_DETECTION_CONFIDENCE = 0.7
-    HAND_TRACKING_CONFIDENCE = 0.5
+    CONFIDENCE_THRESHOLD = 0.6
+    HAND_DETECTION_CONFIDENCE = 0.5  # Lowered for better detection
+    HAND_TRACKING_CONFIDENCE = 0.3   # Lowered for better tracking
     MAX_NUM_HANDS = 2
     
     # Data Paths
@@ -65,7 +65,9 @@ class Config:
         'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T',
         'U', 'V', 'W', 'X', 'Y', 'Z',
         # Numbers
-        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        # Special symbols
+        '+'
     ]
     
     NUM_CLASSES = len(GESTURE_CLASSES)

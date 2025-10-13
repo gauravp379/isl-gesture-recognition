@@ -108,7 +108,7 @@ class GestureDataPreprocessor:
             print(f"❌ Error processing {image_path}: {e}")
             return None
     
-    def normalize_landmarks(self, landmarks: List[float]) -> List[float]:
+    def normalize_landmarks_func(self, landmarks: List[float]) -> List[float]:
         """
         Normalize landmark coordinates
         
@@ -235,7 +235,7 @@ class GestureDataPreprocessor:
                     for hand_idx, landmarks in enumerate(landmarks_data['landmarks']):
                         # Normalize landmarks
                         if self.normalize_landmarks:
-                            landmarks = self.normalize_landmarks(landmarks)
+                            landmarks = self.normalize_landmarks_func(landmarks)
                         
                         # Create base data entry
                         data_entry = {

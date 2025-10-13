@@ -5,10 +5,16 @@
 class ISLGestureApp {
     constructor() {
         this.currentSentence = '';
+        this.currentHindiTranslation = '';
+        this.currentGesture = '';
+        this.currentConfidence = 0.0;
+        this.handCount = 0;
         this.isProcessing = false;
+        this.isSpeaking = false;
         this.fpsCounter = 0;
         this.performanceData = {};
-        
+        this.gestureThumbnails = [];
+
         // Initialize the application
         this.init();
     }
@@ -39,6 +45,8 @@ class ISLGestureApp {
         document.getElementById('speak-btn').addEventListener('click', () => {
             this.speakText();
         });
+
+        // Translate button (removed since translation is now automatic)
 
         // Clear button
         document.getElementById('clear-btn').addEventListener('click', () => {
@@ -95,6 +103,9 @@ class ISLGestureApp {
 
         // Initialize tooltips
         this.initializeTooltips();
+        
+        // Initialize gesture learning panel
+        this.initializeGestureLearningPanel();
     }
 
     /**
@@ -113,15 +124,33 @@ class ISLGestureApp {
                 return;
             }
 
-            // Update current sentence
+            // Update current sentence if changed (backend should send accumulated text)
             if (data.current_sentence !== this.currentSentence) {
+                this.currentSentence = data.current_sentence;
                 this.updateSentenceDisplay(data.current_sentence);
                 this.updateWordSuggestions(data.current_sentence);
+                console.log('Sentence updated:', data.current_sentence); // Logging for debugging
+
+                // Removed automatic speaking - now only speaks when speak button is pressed
             }
 
-            // Update confidence if available
-            if (data.confidence !== undefined) {
+            // Update current gesture and confidence
+            if (data.current_gesture !== this.currentGesture) {
+                this.currentGesture = data.current_gesture;
+                if (this.currentGesture) {
+                    this.updateCurrentCharacter(this.currentGesture);
+                }
+            }
+
+            if (data.confidence !== this.currentConfidence) {
+                this.currentConfidence = data.confidence;
                 this.updateConfidence(data.confidence);
+            }
+
+            // Update hand count
+            if (data.hand_count !== this.handCount) {
+                this.handCount = data.hand_count;
+                this.updateHandCountDisplay(data.hand_count);
             }
 
         } catch (error) {
@@ -164,20 +193,71 @@ class ISLGestureApp {
      * Update sentence display
      */
     updateSentenceDisplay(sentence) {
-        this.currentSentence = sentence;
         const display = document.getElementById('sentence-display');
-        display.value = sentence;
-        
+        display.value = sentence || '';
+
         // Add animation
         display.classList.add('slide-up');
         setTimeout(() => {
             display.classList.remove('slide-up');
         }, 300);
 
-        // Extract and display current character
-        if (sentence.length > 0) {
-            const lastChar = sentence.charAt(sentence.length - 1);
-            this.updateCurrentCharacter(lastChar);
+        // Extract and display current character from last part of sentence
+        if (sentence && sentence.length > 0) {
+            const parts = sentence.trim().split(/\s+/);
+            const lastPart = parts[parts.length - 1];
+            if (lastPart.length > 0) {
+                this.updateCurrentCharacter(lastPart.charAt(lastPart.length - 1).toUpperCase());
+            }
+        } else {
+            this.updateCurrentCharacter('--');
+        }
+
+        // Update Hindi translation automatically when sentence changes
+        if (sentence && sentence.trim()) {
+            this.updateHindiTranslation(sentence);
+        } else {
+            this.updateHindiDisplay('');
+        }
+    }
+
+    /**
+     * Update Hindi display
+     */
+    updateHindiDisplay(hindiText) {
+        const hindiDisplay = document.getElementById('hindi-display');
+        hindiDisplay.value = hindiText || '';
+    }
+
+    /**
+     * Update Hindi translation automatically
+     */
+    async updateHindiTranslation(englishText) {
+        try {
+            const response = await fetch('/api/translate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    text: englishText
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success && result.translated) {
+                this.currentHindiTranslation = result.translated;
+                this.updateHindiDisplay(result.translated);
+                console.log('Hindi translation updated:', result.translated);
+            } else {
+                console.warn('Translation failed:', result.error);
+                this.updateHindiDisplay('Translation unavailable');
+            }
+
+        } catch (error) {
+            console.error('Error updating Hindi translation:', error);
+            this.updateHindiDisplay('Translation error');
         }
     }
 
@@ -186,12 +266,20 @@ class ISLGestureApp {
      */
     updateCurrentCharacter(character) {
         const element = document.getElementById('current-character');
-        element.textContent = character.toUpperCase();
+        element.textContent = character;
         element.classList.add('pulse');
         
         setTimeout(() => {
             element.classList.remove('pulse');
         }, 500);
+    }
+    
+    /**
+     * Update hand count display
+     */
+    updateHandCountDisplay(count) {
+        // Update any hand count displays if needed
+        console.log(`Hand count: ${count}`);
     }
 
     /**
@@ -209,47 +297,56 @@ class ISLGestureApp {
         confidenceBar.className = 'progress-bar ' + 
             (percentage >= 80 ? 'bg-success' : 
              percentage >= 60 ? 'bg-warning' : 'bg-danger');
-    }
-
-    /**
-     * Update word suggestions
-     */
-    updateWordSuggestions(sentence) {
-        const suggestionsContainer = document.getElementById('suggestions');
-        const words = this.generateWordSuggestions(sentence);
         
-        suggestionsContainer.innerHTML = '';
-        words.forEach(word => {
-            const button = document.createElement('button');
-            button.className = 'suggestion-btn';
-            button.textContent = word;
-            button.onclick = () => this.applySuggestion(word);
-            suggestionsContainer.appendChild(button);
-        });
-    }
-
-    /**
-     * Generate word suggestions based on current sentence
-     */
-    generateWordSuggestions(sentence) {
-        // Simple word suggestion logic
-        const commonWords = [
-            'THE', 'AND', 'FOR', 'ARE', 'BUT', 'NOT', 'YOU', 'ALL', 'CAN', 'HER',
-            'HAVE', 'THERE', 'SAY', 'EACH', 'WHICH', 'SHE', 'HOW', 'WILL', 'MY',
-            'HELLO', 'THANK', 'PLEASE', 'HELP', 'GOOD', 'YES', 'NO', 'WATER'
-        ];
-        
-        if (!sentence || sentence.length < 2) {
-            return commonWords.slice(0, 6);
+        // Add animation for high confidence
+        if (percentage >= 80) {
+            confidenceBar.classList.add('pulse');
+            setTimeout(() => {
+                confidenceBar.classList.remove('pulse');
+            }, 1000);
         }
-        
-        // Filter words that start with the last few characters
-        const lastWord = sentence.split(' ').pop().toUpperCase();
-        const suggestions = commonWords
-            .filter(word => word.startsWith(lastWord) && word !== lastWord)
-            .slice(0, 6);
-            
-        return suggestions.length > 0 ? suggestions : commonWords.slice(0, 6);
+    }
+
+    /**
+     * Update word suggestions via backend API
+     */
+    async updateWordSuggestions(sentence) {
+        const suggestionsContainer = document.getElementById('suggestions');
+        suggestionsContainer.innerHTML = '<div class="text-muted small">Loading suggestions...</div>'; // Loading state
+
+        try {
+            const response = await fetch('/api/suggestions', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: sentence || '' })
+            });
+
+            const data = await response.json();
+
+            if (data.error) {
+                console.error('Error fetching suggestions:', data.error);
+                suggestionsContainer.innerHTML = '<div class="text-muted small">Suggestions unavailable</div>';
+                return;
+            }
+
+            suggestionsContainer.innerHTML = '';
+            if (data.suggestions && data.suggestions.length > 0) {
+                data.suggestions.forEach(word => {
+                    const button = document.createElement('button');
+                    button.className = 'suggestion-btn fw-bold';
+                    button.textContent = word;
+                    button.onclick = () => this.applySuggestion(word);
+                    suggestionsContainer.appendChild(button);
+                });
+            } else {
+                suggestionsContainer.innerHTML = '<div class="text-muted small">No suggestions</div>';
+            }
+        } catch (error) {
+            console.error('Error updating word suggestions:', error);
+            suggestionsContainer.innerHTML = '<div class="text-muted small">Error loading suggestions</div>';
+        }
     }
 
     /**
@@ -257,7 +354,11 @@ class ISLGestureApp {
      */
     applySuggestion(word) {
         const words = this.currentSentence.split(' ');
-        words[words.length - 1] = word;
+        if (words.length > 0) {
+            words[words.length - 1] = word;
+        } else {
+            words.push(word);
+        }
         const newSentence = words.join(' ') + ' ';
         
         this.updateSentenceDisplay(newSentence);
@@ -267,25 +368,34 @@ class ISLGestureApp {
     }
 
     /**
-     * Display performance metrics
+     * Display performance metrics with color coding
      */
     displayPerformanceMetrics(data) {
-        // Update average FPS
+        // Update average FPS with color class
         const avgFpsElement = document.getElementById('avg-fps');
         if (data.avg_fps !== undefined) {
-            avgFpsElement.textContent = Math.round(data.avg_fps);
+            const fpsValue = Math.round(data.avg_fps);
+            avgFpsElement.textContent = fpsValue;
+            avgFpsElement.className = 'metric-value ' + 
+                (fpsValue > 25 ? 'good' : fpsValue > 15 ? 'warning' : 'danger');
         }
 
-        // Update accuracy
+        // Update accuracy with color class
         const accuracyElement = document.getElementById('accuracy');
         if (data.accuracy !== undefined) {
-            accuracyElement.textContent = Math.round(data.accuracy * 100) + '%';
+            const accValue = Math.round(data.accuracy * 100);
+            accuracyElement.textContent = accValue + '%';
+            accuracyElement.className = 'metric-value ' + 
+                (accValue >= 80 ? 'good' : accValue >= 60 ? 'warning' : 'danger');
         }
 
-        // Update latency
+        // Update latency with color class (lower is better)
         const latencyElement = document.getElementById('latency');
         if (data.latency !== undefined) {
-            latencyElement.textContent = Math.round(data.latency) + 'ms';
+            const latValue = Math.round(data.latency);
+            latencyElement.textContent = latValue + 'ms';
+            latencyElement.className = 'metric-value ' + 
+                (latValue < 100 ? 'good' : latValue < 200 ? 'warning' : 'danger');
         }
     }
 
@@ -295,7 +405,15 @@ class ISLGestureApp {
     async speakText() {
         const speakBtn = document.getElementById('speak-btn');
         const originalText = speakBtn.innerHTML;
-        
+
+        // Don't speak if already speaking or no text
+        if (this.isSpeaking || !this.currentSentence || !this.currentSentence.trim()) {
+            console.log('Speech blocked: already speaking or no text');
+            return;
+        }
+
+        this.isSpeaking = true;
+
         try {
             speakBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Speaking...';
             speakBtn.disabled = true;
@@ -306,12 +424,12 @@ class ISLGestureApp {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    text: this.currentSentence
+                    text: this.currentSentence.trim()
                 })
             });
 
             const result = await response.json();
-            
+
             if (!result.success) {
                 throw new Error(result.error || 'Failed to speak text');
             }
@@ -328,8 +446,11 @@ class ISLGestureApp {
             speakBtn.innerHTML = originalText;
         } finally {
             speakBtn.disabled = false;
+            this.isSpeaking = false;
         }
     }
+
+
 
     /**
      * Clear current sentence
@@ -344,9 +465,12 @@ class ISLGestureApp {
             });
 
             const result = await response.json();
-            
+
             if (result.success) {
+                this.currentSentence = '';
+                this.currentHindiTranslation = '';
                 this.updateSentenceDisplay('');
+                this.updateHindiDisplay('');
                 this.updateCurrentCharacter('--');
                 this.updateConfidence(0);
                 this.updateWordSuggestions('');
@@ -383,11 +507,23 @@ class ISLGestureApp {
             event.preventDefault();
             this.speakText();
         }
-        
-        // Ctrl/Cmd + Delete: Clear
+
+        // Ctrl/Cmd + Backspace: Clear sentence
         if ((event.ctrlKey || event.metaKey) && event.code === 'Backspace') {
             event.preventDefault();
             this.clearSentence();
+        }
+
+        // Backspace: Remove last character
+        if (event.code === 'Backspace' && !event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
+            event.preventDefault();
+            this.backspaceLastCharacter();
+        }
+
+        // Plus key (+): Add space
+        if (event.code === 'Equal' && event.shiftKey && !event.ctrlKey && !event.metaKey && !event.altKey) {
+            event.preventDefault();
+            this.addSpace();
         }
     }
 
@@ -420,8 +556,54 @@ class ISLGestureApp {
      * Send sentence update to backend
      */
     async sendSentenceUpdate(sentence) {
-        // Implementation to sync sentence with backend if needed
-        console.log('Sentence updated:', sentence);
+        try {
+            await fetch('/api/update_sentence', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ sentence: sentence })
+            });
+        } catch (error) {
+            console.error('Error sending sentence update:', error);
+        }
+    }
+
+    /**
+     * Remove last character from sentence
+     */
+    async backspaceLastCharacter() {
+        if (!this.currentSentence || this.currentSentence.length === 0) {
+            console.log('No characters to remove');
+            return;
+        }
+
+        // Remove the last character
+        const newSentence = this.currentSentence.slice(0, -1);
+
+        // Update the display
+        this.updateSentenceDisplay(newSentence);
+
+        // Send to backend
+        await this.sendSentenceUpdate(newSentence);
+
+        console.log('Backspace: Removed last character');
+    }
+
+    /**
+     * Add space to sentence
+     */
+    async addSpace() {
+        // Add space to the current sentence
+        const newSentence = this.currentSentence + ' ';
+
+        // Update the display
+        this.updateSentenceDisplay(newSentence);
+
+        // Send to backend
+        await this.sendSentenceUpdate(newSentence);
+
+        console.log('Space: Added space to sentence');
     }
 
     /**
@@ -436,6 +618,132 @@ class ISLGestureApp {
         } catch (error) {
             console.error('Health check failed:', error);
             return null;
+        }
+    }
+    
+    /**
+     * Initialize gesture learning panel
+     */
+    initializeGestureLearningPanel() {
+        console.log('🎓 Initializing gesture learning panel...');
+        
+        // Create gesture thumbnails for letters A-Z
+        const alphabetContainer = document.querySelector('.alphabet-thumbnails .thumbnail-grid');
+        const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+        
+        letters.forEach(letter => {
+            const thumbnail = this.createGestureThumbnail(letter, 'letter');
+            alphabetContainer.appendChild(thumbnail);
+        });
+        
+        // Create gesture thumbnails for numbers 0-9
+        const numberContainer = document.querySelector('.number-thumbnails .thumbnail-grid');
+        const numbers = '0123456789'.split('');
+        
+        numbers.forEach(number => {
+            const thumbnail = this.createGestureThumbnail(number, 'number');
+            numberContainer.appendChild(thumbnail);
+        });
+        
+        // Set initial gesture image to 'A'
+        this.updateGestureImage('A');
+        
+        console.log('✅ Gesture learning panel initialized');
+    }
+    
+    /**
+     * Create a gesture thumbnail element
+     */
+    createGestureThumbnail(character, type) {
+        const thumbnail = document.createElement('div');
+        thumbnail.className = 'gesture-thumbnail';
+        thumbnail.textContent = character;
+        thumbnail.dataset.gesture = character;
+        thumbnail.dataset.type = type;
+        
+        // Add click handler to show gesture image
+        thumbnail.addEventListener('click', () => {
+            this.showGestureInLearningPanel(character);
+            this.highlightActiveThumbnail(thumbnail);
+        });
+        
+        return thumbnail;
+    }
+    
+    /**
+     * Update gesture image in learning panel
+     */
+    updateGestureImage(gesture) {
+        if (!gesture) return;
+        
+        const gestureImage = document.getElementById('gesture-image');
+        const gestureTitle = document.getElementById('gesture-title');
+        const gestureDescription = document.getElementById('gesture-description');
+        
+        // Update image source
+        const imagePath = `/static/gestures/${gesture.toUpperCase()}.png`;
+        gestureImage.src = imagePath;
+        gestureImage.alt = `Gesture for ${gesture}`;
+        
+        // Add animation class
+        gestureImage.classList.add('gesture-image-update');
+        setTimeout(() => {
+            gestureImage.classList.remove('gesture-image-update');
+        }, 500);
+        
+        // Update title and description
+        const isLetter = /^[A-Z]$/.test(gesture);
+        const isNumber = /^[0-9]$/.test(gesture);
+        
+        if (isLetter) {
+            gestureTitle.textContent = `Letter: ${gesture}`;
+            gestureDescription.textContent = `Practice the hand sign for the letter "${gesture}"`;
+        } else if (isNumber) {
+            gestureTitle.textContent = `Number: ${gesture}`;
+            gestureDescription.textContent = `Practice the hand sign for the number "${gesture}"`;
+        } else {
+            gestureTitle.textContent = `Gesture: ${gesture}`;
+            gestureDescription.textContent = `Practice this gesture sign`;
+        }
+        
+        // Update active thumbnail
+        this.updateActiveThumbnail(gesture);
+    }
+    
+    /**
+     * Show specific gesture in learning panel (when thumbnail clicked)
+     */
+    showGestureInLearningPanel(gesture) {
+        this.updateGestureImage(gesture);
+        
+        // Scroll learning panel into view if needed
+        const learningPanel = document.querySelector('.gesture-learning-container');
+        learningPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    
+    /**
+     * Highlight active thumbnail
+     */
+    highlightActiveThumbnail(activeThumbnail) {
+        // Remove active class from all thumbnails
+        document.querySelectorAll('.gesture-thumbnail').forEach(thumb => {
+            thumb.classList.remove('active');
+        });
+        
+        // Add active class to clicked thumbnail
+        activeThumbnail.classList.add('active');
+    }
+    
+    /**
+     * Update active thumbnail based on current gesture
+     */
+    updateActiveThumbnail(gesture) {
+        if (!gesture) return;
+        
+        // Find and highlight the thumbnail for current gesture
+        const thumbnail = document.querySelector(`[data-gesture="${gesture.toUpperCase()}"]`);
+        if (thumbnail) {
+            this.highlightActiveThumbnail(thumbnail);
         }
     }
 }

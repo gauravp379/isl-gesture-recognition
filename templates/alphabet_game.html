@@ -1,0 +1,314 @@
+ <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alphabet Ascender - ISL Game</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style-game.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('learn') }}">
+                <i class="fas fa-arrow-left me-2"></i> Back to Hub
+            </a>
+            <span class="navbar-brand text-game-title">
+                <i class="fas fa-medal me-2"></i> Alphabet Ascender
+            </span>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-6">
+                <h2 class="text-game-level" id="level-title">Level 1: The Basics (A, B, C, D, E)</h2>
+                <div class="d-flex align-items-center mt-2">
+                    <i class="fas fa-star text-warning me-2"></i>
+                    <span class="badge bg-success me-3" id="xp-display">XP: 0 / 500</span>
+                    <div class="progress w-50">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" id="xp-bar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <span class="h4 me-3 text-info"><i class="fas fa-trophy"></i> Mastery: <span id="mastery-score">0%</span></span>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="card card-neon shadow-lg">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 text-center border-end border-light py-4">
+                                <h4 class="text-white-50">Current Sign</h4>
+                                <div class="sign-display-box my-4" id="sign-display-box">
+                                    <h1 class="display-1 fw-bold text-gradient" id="current-character">A</h1>
+                                </div>
+                                <p class="text-white-50">Show your hand gesture below!</p>
+                                <button class="btn btn-primary mt-3" id="practice-btn">Practice Now</button>
+                                <button class="btn btn-secondary mt-2" id="continuous-btn">Continuous Mode</button>
+                                <div id="feedback" class="mt-3" style="display: none;">
+                                    <span id="feedback-text"></span>
+                                </div>
+                                <div id="quiz-mode" class="mt-3" style="display: none;">
+                                    <h5 class="text-warning">Quiz Mode: No hints!</h5>
+                                    <p class="text-white-50">Perform the gesture for the current sign.</p>
+                                </div>
+                            </div>
+
+                            <div class="col-md-5 text-center py-4">
+                                <h4 class="text-white-50">How to Sign It</h4>
+                                <img id="gesture-image" src="{{ url_for('static', filename='gestures/isl_gesture_A.jpg') }}" alt="Gesture for A" class="img-fluid gesture-image-placeholder my-4">
+                                <p class="text-info"><i class="fas fa-info-circle me-1"></i> Look closely at the finger positions.</p>
+                                <div id="webcam-container" class="mt-3">
+                                    <img id="webcam" src="{{ url_for('video_feed') }}" alt="Video Stream" class="img-fluid rounded" style="width: 100%; max-width: 300px; border: 2px solid #6cff87; border-radius: 10px; background-color: #000;">
+                                    <canvas id="canvas" style="display: none;"></canvas>
+                                    <div id="webcam-status" class="mt-2 text-white-50 small">Camera connected</div>
+                                </div>
+                            </div>
+
+                            <div class="col-md-3 py-4">
+                                <h4 class="text-white-50">Navigation</h4>
+                                <ul class="list-group list-group-flush list-group-game mt-3" id="nav-list">
+                                    <!-- Dynamically populated -->
+                                </ul>
+                                <button class="btn btn-success w-100 mt-4" id="next-level-btn" disabled>
+                                    <i class="fas fa-lock"></i> Master All to Unlock Next Level
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="card bg-light border-0">
+                    <div class="card-body">
+                        <h4 class="card-title text-primary" style="color: black;"><i class="fas fa-book-open me-2"></i> How to Play</h4>
+                        <ol>
+                            <li>Select a character from the **Navigation** list.</li>
+                            <li>View the **Current Sign** and the **How to Sign It** image.</li>
+                            <li>Perform the gesture in front of the camera below.</li>
+                            <li>Click **Practice Now** to check if your gesture is correct (system will tell you right/wrong).</li>
+                            <li>Master all characters in the current level to **Unlock the Next Level**!</li>
+                        </ol>
+                        <p class="text-black mt-3"><i class="fas fa-info-circle"></i> For a complete dataset, collect 1000+ photos per gesture via the main recognition page to train the model accurately.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const navList = document.getElementById('nav-list');
+            const currentCharacter = document.getElementById('current-character');
+            const gestureImage = document.getElementById('gesture-image');
+            const practiceBtn = document.getElementById('practice-btn');
+            const feedback = document.getElementById('feedback');
+            const feedbackText = document.getElementById('feedback-text');
+            const xpDisplay = document.getElementById('xp-display');
+            const xpBar = document.getElementById('xp-bar');
+            const masteryScore = document.getElementById('mastery-score');
+            const levelTitle = document.getElementById('level-title');
+            const nextLevelBtn = document.getElementById('next-level-btn');
+            const webcam = document.getElementById('webcam');
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+
+            // Full gesture map for A-Z
+            const gestureMap = {};
+            for (let i = 65; i <= 90; i++) {
+                const char = String.fromCharCode(i);
+                gestureMap[char] = `/static/gestures/isl_gesture_${char}.jpg`;
+            }
+
+            // Levels: Grouped for progression
+            const levels = [
+                { name: 'Level 1: The Basics (A-E)', chars: ['A', 'B', 'C', 'D', 'E'], xpRequired: 500 },
+                { name: 'Level 2: Building Up (F-J)', chars: ['F', 'G', 'H', 'I', 'J'], xpRequired: 500 },
+                { name: 'Level 3: Mid-Alphabet (K-O)', chars: ['K', 'L', 'M', 'N', 'O'], xpRequired: 500 },
+                { name: 'Level 4: Almost There (P-T)', chars: ['P', 'Q', 'R', 'S', 'T'], xpRequired: 500 },
+                { name: 'Level 5: The Finish (U-Z)', chars: ['U', 'V', 'W', 'X', 'Y', 'Z'], xpRequired: 600 }
+            ];
+
+            let currentLevel = 0;
+            let mastery = {}; // Track mastery per char
+            let xp = 0;
+            let activeChar = 'A';
+            let continuousMode = false;
+            let quizMode = false;
+            let quizChars = [];
+            let quizIndex = 0;
+
+            // Webcam is now using the video feed from the server
+            // No need for getUserMedia here as we're using the img element with video_feed
+
+            // Load level
+            function loadLevel(levelIndex) {
+                currentLevel = levelIndex;
+                const level = levels[levelIndex];
+                levelTitle.textContent = level.name;
+                navList.innerHTML = '';
+                level.chars.forEach(char => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item';
+                    li.setAttribute('data-char', char);
+                    li.innerHTML = `${char} ${mastery[char] ? '<i class="fas fa-check text-success"></i> Mastered' : ''}`;
+                    if (levelIndex > 0 && !isLevelUnlocked(levelIndex)) li.classList.add('disabled');
+                    navList.appendChild(li);
+                });
+                updateUI();
+            }
+
+            // Check if level is unlocked
+            function isLevelUnlocked(levelIndex) {
+                if (levelIndex === 0) return true;
+                const prevLevel = levels[levelIndex - 1];
+                return prevLevel.chars.every(char => mastery[char]);
+            }
+
+            // Update UI
+            function updateUI() {
+                const level = levels[currentLevel];
+                const masteredCount = level.chars.filter(char => mastery[char]).length;
+                const totalChars = level.chars.length;
+                masteryScore.textContent = `${Math.round((masteredCount / totalChars) * 100)}%`;
+                xpDisplay.textContent = `XP: ${xp} / ${level.xpRequired}`;
+                xpBar.style.width = `${(xp / level.xpRequired) * 100}%`;
+                nextLevelBtn.disabled = !isLevelUnlocked(currentLevel + 1);
+                if (nextLevelBtn.disabled) {
+                    nextLevelBtn.innerHTML = '<i class="fas fa-lock"></i> Master All to Unlock Next Level';
+                } else {
+                    nextLevelBtn.innerHTML = '<i class="fas fa-unlock"></i> Next Level';
+                }
+            }
+
+            // Switch character
+            navList.addEventListener('click', (e) => {
+                if (e.target.classList.contains('disabled')) return;
+                const char = e.target.getAttribute('data-char');
+                if (!char) return;
+                activeChar = char;
+                currentCharacter.textContent = char;
+                gestureImage.src = gestureMap[char];
+                gestureImage.alt = 'Gesture for ' + char;
+                document.querySelectorAll('.list-group-item').forEach(li => li.classList.remove('active'));
+                e.target.classList.add('active');
+            });
+
+            // Practice button: Simulate recognition (in real app, integrate with model)
+            practiceBtn.addEventListener('click', () => {
+                // Capture frame from webcam
+                canvas.width = webcam.videoWidth;
+                canvas.height = webcam.videoHeight;
+                ctx.drawImage(webcam, 0, 0);
+                const imageData = canvas.toDataURL('image/jpeg');
+
+                // Simulate recognition: Random for demo (replace with actual model call)
+                const isCorrect = Math.random() > 0.5; // 50% chance for demo
+                feedback.style.display = 'block';
+                if (isCorrect) {
+                    feedbackText.innerHTML = '<i class="fas fa-check-circle text-success"></i> Correct! Well done.';
+                    feedbackText.className = 'text-success feedback-success';
+                    if (!mastery[activeChar]) {
+                        mastery[activeChar] = true;
+                        xp += 100; // Gain XP
+                    }
+                } else {
+                    feedbackText.innerHTML = '<i class="fas fa-times-circle text-danger"></i> Wrong gesture. Try again!';
+                    feedbackText.className = 'text-danger feedback-error';
+                }
+                updateUI();
+                setTimeout(() => feedback.style.display = 'none', 3000);
+            });
+
+            // Continuous mode button
+            document.getElementById('continuous-btn').addEventListener('click', () => {
+                continuousMode = !continuousMode;
+                const btn = document.getElementById('continuous-btn');
+                if (continuousMode) {
+                    btn.classList.remove('btn-secondary');
+                    btn.classList.add('btn-warning');
+                    btn.textContent = 'Continuous Mode ON';
+                    startContinuousCheck();
+                } else {
+                    btn.classList.remove('btn-warning');
+                    btn.classList.add('btn-secondary');
+                    btn.textContent = 'Continuous Mode';
+                }
+            });
+
+            // Start continuous checking
+            function startContinuousCheck() {
+                if (!continuousMode) return;
+                setTimeout(() => {
+                    // Simulate continuous recognition
+                    const isCorrect = Math.random() > 0.5;
+                    if (isCorrect) {
+                        feedback.style.display = 'block';
+                        feedbackText.innerHTML = '<i class="fas fa-check-circle text-success"></i> Correct! Well done.';
+                        feedbackText.className = 'text-success feedback-success';
+                        if (!mastery[activeChar]) {
+                            mastery[activeChar] = true;
+                            xp += 100;
+                        }
+                        updateUI();
+                        setTimeout(() => feedback.style.display = 'none', 2000);
+                    } else {
+                        feedback.style.display = 'block';
+                        feedbackText.innerHTML = '<i class="fas fa-times-circle text-danger"></i> Wrong gesture. Try again!';
+                        feedbackText.className = 'text-danger feedback-error';
+                        setTimeout(() => feedback.style.display = 'none', 2000);
+                    }
+                    if (continuousMode) startContinuousCheck();
+                }, 2000); // Check every 2 seconds
+            }
+
+            // Check for quiz mode after all levels mastered
+            function checkForQuizMode() {
+                const allMastered = levels.every(level => level.chars.every(char => mastery[char]));
+                if (allMastered && !quizMode) {
+                    quizMode = true;
+                    quizChars = levels.flatMap(level => level.chars);
+                    quizIndex = 0;
+                    document.getElementById('quiz-mode').style.display = 'block';
+                    document.getElementById('gesture-image').parentElement.classList.add('quiz-mode-active');
+                    levelTitle.textContent = 'Quiz Mode: Random Signs!';
+                    loadQuizChar();
+                    // Success animation
+                    document.getElementById('sign-display-box').classList.add('success-animation');
+                    setTimeout(() => document.getElementById('sign-display-box').classList.remove('success-animation'), 2000);
+                }
+            }
+
+            // Load random quiz character
+            function loadQuizChar() {
+                activeChar = quizChars[Math.floor(Math.random() * quizChars.length)];
+                currentCharacter.textContent = activeChar;
+                gestureImage.src = gestureMap[activeChar];
+                gestureImage.alt = 'Gesture for ' + activeChar;
+            }
+
+            // Next level
+            nextLevelBtn.addEventListener('click', () => {
+                if (isLevelUnlocked(currentLevel + 1)) {
+                    loadLevel(currentLevel + 1);
+                } else {
+                    checkForQuizMode();
+                }
+            });
+
+            // Load initial level
+            loadLevel(0);
+        });
+    </script>
+</body>
+</html>

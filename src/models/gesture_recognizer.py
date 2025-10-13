@@ -90,7 +90,12 @@ class GestureRecognizer:
             label_path = self.model_path.replace('.h5', '_labels.pkl')
             if os.path.exists(label_path):
                 with open(label_path, 'rb') as f:
-                    self.class_labels = pickle.load(f)
+                    label_encoder = pickle.load(f)
+                    # Handle both LabelEncoder object and list of classes
+                    if hasattr(label_encoder, 'classes_'):
+                        self.class_labels = label_encoder.classes_.tolist()
+                    else:
+                        self.class_labels = label_encoder
             
             # Load scaler if available
             scaler_path = self.model_path.replace('.h5', '_scaler.pkl')
@@ -161,30 +166,42 @@ class GestureRecognizer:
     def preprocess_landmarks(self, landmarks_data: Dict) -> np.ndarray:
         """
         Preprocess landmarks for model input
-        
+
         Args:
             landmarks_data: Raw landmarks data
-            
+
         Returns:
             Preprocessed feature vector
         """
         if not landmarks_data or not landmarks_data['landmarks']:
             return np.zeros((63,))  # 21 landmarks * 3 coordinates
-        
-        # For now, use the first hand detected
-        landmarks = landmarks_data['landmarks'][0]
-        
-        # Convert to numpy array
-        features = np.array(landmarks, dtype=np.float32)
-        
-        # Normalize landmarks (simple min-max normalization)
-        features = self.normalize_landmarks(features)
-        
-        # Apply scaler if available
-        if self.scaler:
-            features = self.scaler.transform(features.reshape(1, -1)).flatten()
-        
-        return features
+
+        # Process both hands if available, use the one with better visibility
+        best_features = None
+        best_score = -1
+
+        for hand_idx, landmarks in enumerate(landmarks_data['landmarks']):
+            # Convert to numpy array
+            features = np.array(landmarks, dtype=np.float32)
+
+            # Calculate a simple score based on landmark spread (better hand detection)
+            wrist = features[:3]  # First 3 values are wrist x,y,z
+            distances = np.linalg.norm(features.reshape(-1, 3) - wrist.reshape(1, 3), axis=1)
+            score = np.mean(distances)  # Higher score = better hand pose
+
+            # Normalize landmarks
+            features = self.normalize_landmarks(features)
+
+            # Apply scaler if available
+            if self.scaler:
+                features = self.scaler.transform(features.reshape(1, -1)).flatten()
+
+            # Keep the hand with the best score
+            if score > best_score:
+                best_score = score
+                best_features = features
+
+        return best_features if best_features is not None else np.zeros((63,))
     
     def normalize_landmarks(self, landmarks: np.ndarray) -> np.ndarray:
         """

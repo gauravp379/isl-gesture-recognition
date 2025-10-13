@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learn ISL - Start Your Quest!</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style-game.css') }}" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-arrow-left me-2"></i> Back to Recognition
+            </a>
+            <span class="navbar-brand">
+                <i class="fas fa-graduation-cap me-2"></i> ISL Learning Hub
+            </span>
+        </div>
+    </nav>
+
+    <div class="container my-5">
+        <h1 class="text-center mb-5 text-game-title">Start Your Sign Language Quest! 🚀</h1>
+
+        <div class="row justify-content-center">
+
+            <div class="col-md-5 mb-4">
+                <a href="{{ url_for('alphabet_game') }}" class="game-card-link">
+                    <div class="card game-card h-100 shadow-lg border-primary">
+                        <div class="card-header bg-primary text-white text-center">
+                            <h2>Alphabet Ascender 🅰️</h2>
+                        </div>
+                        <div class="card-body text-center">
+                            <i class="fas fa-spell-check fa-4x mb-3 text-primary"></i>
+                            <p class="card-text">Master the 26 letters of the ISL finger-spelling alphabet. Build a strong foundation!</p>
+                            <div class="progress mt-3">
+                                <div class="progress-bar bg-success" style="width: 10%" role="progressbar">Level 1 Unlocked</div>
+                            </div>
+                        </div>
+                        <div class="card-footer text-center">
+                            <button class="btn btn-primary btn-lg">Begin Quest</button>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col-md-5 mb-4">
+                <a href="{{ url_for('numbers_game') }}" class="game-card-link">
+                    <div class="card game-card h-100 shadow-lg border-warning">
+                        <div class="card-header bg-warning text-dark text-center">
+                            <h2>Number Navigator 🔢</h2>
+                        </div>
+                        <div class="card-body text-center">
+                            <i class="fas fa-calculator fa-4x mb-3 text-warning"></i>
+                            <p class="card-text">Learn to sign numbers 1 to 9. Essential for communication and counting!</p>
+                            <div class="progress mt-3">
+                                <div class="progress-bar bg-success" style="width: 10%" role="progressbar">Level 1 Unlocked</div>
+                            </div>
+                        </div>
+                        <div class="card-footer text-center">
+                            <button class="btn btn-warning btn-lg">Begin Quest</button>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

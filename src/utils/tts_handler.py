@@ -12,14 +12,15 @@ import pygame
 from gtts import gTTS
 import io
 import requests
+import queue
 
 class TTSHandler:
     """Handler for text-to-speech functionality"""
-    
+
     def __init__(self, engine_type: str = 'pyttsx3', config: Dict = None):
         """
         Initialize TTS handler
-        
+
         Args:
             engine_type: Type of TTS engine ('pyttsx3' or 'gtts')
             config: Configuration dictionary
@@ -28,11 +29,13 @@ class TTSHandler:
         self.config = config or {}
         self.engine = None
         self.is_speaking = False
-        self.speech_queue = []
-        
+        self.speech_queue = queue.Queue()
+        self.worker_thread = None
+        self.stop_worker = False
+
         # Initialize the selected engine
         self._init_engine()
-        
+
         # Initialize pygame mixer for audio playback (for gTTS)
         if self.engine_type == 'gtts':
             try:
@@ -40,7 +43,33 @@ class TTSHandler:
                 print("✅ Pygame mixer initialized for gTTS")
             except Exception as e:
                 print(f"⚠️ Could not initialize pygame mixer: {e}")
-    
+
+        # Start the background worker thread
+        self._start_worker_thread()
+
+    def _start_worker_thread(self):
+        """Start the background worker thread for processing speech queue"""
+        if self.worker_thread is None or not self.worker_thread.is_alive():
+            self.stop_worker = False
+            self.worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
+            self.worker_thread.start()
+            print("✅ TTS worker thread started")
+
+    def _worker_loop(self):
+        """Background worker loop to process speech queue"""
+        while not self.stop_worker:
+            try:
+                # Wait for text from queue with timeout
+                text = self.speech_queue.get(timeout=0.1)
+                if text:
+                    self._speak_sync(text)
+                self.speech_queue.task_done()
+            except queue.Empty:
+                continue
+            except Exception as e:
+                print(f"❌ Error in TTS worker loop: {e}")
+                time.sleep(0.1)
+
     def _init_engine(self):
         """Initialize the TTS engine"""
         try:
@@ -97,32 +126,35 @@ class TTSHandler:
     def speak(self, text: str, async_mode: bool = True) -> bool:
         """
         Convert text to speech
-        
+
         Args:
             text: Text to speak
             async_mode: Whether to speak asynchronously
-            
+
         Returns:
             Success status
         """
         if not text or not text.strip():
             print("⚠️ No text provided for TTS")
             return False
-        
-        if self.is_speaking and not async_mode:
-            print("⚠️ TTS engine is currently speaking")
-            return False
-        
+
         try:
+            # Clear any previous items in queue to prevent buildup
+            while not self.speech_queue.empty():
+                try:
+                    self.speech_queue.get_nowait()
+                    self.speech_queue.task_done()
+                except queue.Empty:
+                    break
+
             if async_mode:
-                # Start speaking in a separate thread
-                thread = threading.Thread(target=self._speak_sync, args=(text,))
-                thread.daemon = True
-                thread.start()
+                # Add text to queue for background processing
+                self.speech_queue.put(text)
+                print(f"📝 Added to TTS queue: '{text}' (queue size: {self.speech_queue.qsize()})")
                 return True
             else:
                 return self._speak_sync(text)
-                
+
         except Exception as e:
             print(f"❌ Error in TTS speak: {e}")
             return False
@@ -335,18 +367,23 @@ class TTSHandler:
     def cleanup(self):
         """Clean up TTS resources"""
         try:
+            # Stop the worker thread
+            self.stop_worker = True
+            if self.worker_thread and self.worker_thread.is_alive():
+                self.worker_thread.join(timeout=1.0)
+
             self.stop_speaking()
-            
+
             if self.engine_type == 'pyttsx3' and self.engine:
                 # pyttsx3 doesn't have explicit cleanup
                 pass
-                
+
             elif self.engine_type == 'gtts':
                 pygame.mixer.quit()
-            
+
             self.engine = None
             print("🧹 TTS handler cleaned up")
-            
+
         except Exception as e:
             print(f"⚠️ Error during TTS cleanup: {e}")
 

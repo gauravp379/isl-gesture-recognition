@@ -25,21 +25,21 @@
         </div>
     </nav>
 
-    <div class="container-fluid mt-3">
+    <div class="container-fluid mt-2">
         <div class="row">
             <!-- Video Feed Column -->
             <div class="col-lg-8">
-                <div class="card">
-                    <div class="card-header">
+                <div class="card mb-2">
+                    <div class="card-header py-2">
                         <h5 class="mb-0">
                             <i class="fas fa-video me-2"></i>
                             Live Camera Feed
                         </h5>
                     </div>
-                    <div class="card-body text-center">
+                    <div class="card-body text-center p-2">
                         <div class="video-container">
-                            <img id="video-stream" 
-                                 src="{{ url_for('video_feed') }}" 
+                            <img id="video-stream"
+                                 src="{{ url_for('video_feed') }}"
                                  alt="Video Stream"
                                  class="img-fluid rounded">
                             <div class="video-overlay">
@@ -53,14 +53,14 @@
                 </div>
 
                 <!-- Gesture Recognition Results -->
-                <div class="card mt-3">
-                    <div class="card-header">
+                <div class="card mb-2">
+                    <div class="card-header py-2">
                         <h5 class="mb-0">
                             <i class="fas fa-hand-sparkles me-2"></i>
                             Recognition Results
                         </h5>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-2">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="result-item">
@@ -72,11 +72,46 @@
                                 <div class="result-item">
                                     <label>Confidence:</label>
                                     <div class="progress mt-2">
-                                        <div id="confidence-bar" class="progress-bar bg-success" 
+                                        <div id="confidence-bar" class="progress-bar bg-success"
                                              role="progressbar" style="width: 0%">
                                             <span id="confidence-text">0%</span>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Metrics - Moved to more prominent position -->
+                <div class="card mb-2">
+                    <div class="card-header py-2">
+                        <h5 class="mb-0">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Performance Metrics
+                        </h5>
+                    </div>
+                    <div class="card-body p-2">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="metric">
+                                    <i class="fas fa-tachometer-alt metric-icon mb-1 text-primary"></i>
+                                    <div id="avg-fps" class="metric-value">--</div>
+                                    <div class="metric-label">Avg FPS</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="metric">
+                                    <i class="fas fa-bullseye metric-icon mb-1 text-success"></i>
+                                    <div id="accuracy" class="metric-value">--</div>
+                                    <div class="metric-label">Accuracy</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="metric">
+                                    <i class="fas fa-clock metric-icon mb-1 text-warning"></i>
+                                    <div id="latency" class="metric-value">--</div>
+                                    <div class="metric-label">Latency</div>
                                 </div>
                             </div>
                         </div>
@@ -95,12 +130,23 @@
                         </h5>
                     </div>
                     <div class="card-body">
-                        <textarea id="sentence-display" 
-                                  class="form-control mb-3" 
-                                  rows="4" 
-                                  placeholder="Recognized text will appear here..."
-                                  readonly></textarea>
-                        
+                        <div class="mb-3">
+                            <label for="sentence-display" class="form-label">English:</label>
+                            <textarea id="sentence-display"
+                                      class="form-control"
+                                      rows="2"
+                                      placeholder="Recognized text will appear here..."
+                                      readonly></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="hindi-display" class="form-label">Hindi:</label>
+                            <textarea id="hindi-display"
+                                      class="form-control"
+                                      rows="2"
+                                      placeholder="Translation will appear here..."
+                                      readonly></textarea>
+                        </div>
+
                         <div class="d-grid gap-2">
                             <button id="speak-btn" class="btn btn-success btn-lg">
                                 <i class="fas fa-volume-up me-2"></i>
@@ -115,7 +161,7 @@
                 </div>
 
                 <!-- Word Suggestions -->
-                <div class="card mt-3">
+                <div class="card mt-2">
                     <div class="card-header">
                         <h5 class="mb-0">
                             <i class="fas fa-lightbulb me-2"></i>
@@ -129,63 +175,63 @@
                     </div>
                 </div>
 
-                <!-- Performance Metrics -->
-                <div class="card mt-3">
+                <!-- Gesture Learning Panel -->
+                <div class="card mt-2">
                     <div class="card-header">
                         <h5 class="mb-0">
-                            <i class="fas fa-chart-line me-2"></i>
-                            Performance
+                            <i class="fas fa-graduation-cap me-2"></i>
+                            Gesture Learning
                         </h5>
                     </div>
-                    <div class="card-body">
-                        <div class="row text-center">
-                            <div class="col-4">
-                                <div class="metric">
-                                    <div id="avg-fps" class="metric-value">--</div>
-                                    <div class="metric-label">Avg FPS</div>
+                    <div class="card-body text-center">
+                        <div class="gesture-learning-container">
+                            <div class="current-gesture-display mb-3">
+                                <div class="gesture-image-container">
+                                    <img id="gesture-image"
+                                         src="{{ url_for('static', filename='gestures/A.png') }}"
+                                         alt="Current Gesture"
+                                         class="gesture-image img-thumbnail">
+                                </div>
+                                <div class="gesture-info mt-2">
+                                    <h6 id="gesture-title">Practice this gesture:</h6>
+                                    <p id="gesture-description" class="text-muted">Hold your hand like this to sign the letter/number</p>
                                 </div>
                             </div>
-                            <div class="col-4">
-                                <div class="metric">
-                                    <div id="accuracy" class="metric-value">--</div>
-                                    <div class="metric-label">Accuracy</div>
-                                </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="metric">
-                                    <div id="latency" class="metric-value">--</div>
-                                    <div class="metric-label">Latency</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Gesture Classes -->
-                <div class="card mt-3">
-                    <div class="card-header">
-                        <h5 class="mb-0">
-                            <i class="fas fa-list me-2"></i>
-                            Supported Gestures
-                        </h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="gesture-classes">
-                            <div class="mb-2">
-                                <strong>Alphabets (26):</strong>
-                                <div class="gesture-grid">
-                                    {% for gesture in gesture_classes[:26] %}
-                                        <span class="badge bg-primary gesture-badge">{{ gesture }}</span>
-                                    {% endfor %}
+                            <!-- Gesture Quick Reference -->
+                            <div class="gesture-reference">
+                                <h6 class="mb-2">Quick Reference:</h6>
+                                <div class="gesture-thumbnails">
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="alphabet-thumbnails mb-2">
+                                                <small class="text-muted d-block mb-1">Letters:</small>
+                                                <div class="thumbnail-grid">
+                                                    <!-- Will be populated by JavaScript -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <div class="number-thumbnails">
+                                                <small class="text-muted d-block mb-1">Numbers:</small>
+                                                <div class="thumbnail-grid">
+                                                    <!-- Will be populated by JavaScript -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div>
-                                <strong>Numbers (10):</strong>
-                                <div class="gesture-grid">
-                                    {% for gesture in gesture_classes[26:] %}
-                                        <span class="badge bg-secondary gesture-badge">{{ gesture }}</span>
-                                    {% endfor %}
-                                </div>
+
+                            <!-- Learn Mode Button -->
+                            <div class="mt-3">
+                                <a href="{{ url_for('learn') }}" class="btn btn-primary btn-lg w-100">
+                                    <i class="fas fa-graduation-cap me-2"></i>
+                                    Start Learning Mode
+                                </a>
+                                <p class="text-muted mt-2 small">Interactive games to learn ISL gestures</p>
                             </div>
                         </div>
                     </div>

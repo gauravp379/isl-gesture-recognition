@@ -31,7 +31,7 @@ class CNNTrainer:
         
         # Model parameters
         self.input_shape = (63,)  # 21 landmarks * 3 coordinates
-        self.num_classes = 36     # 26 letters + 10 numbers
+        self.num_classes = None   # Will be determined from data
         self.batch_size = 32
         self.epochs = 100
         self.validation_split = 0.2
@@ -80,12 +80,18 @@ class CNNTrainer:
             print(f"📂 Loading data from {self.data_path}")
             data = pd.read_csv(self.data_path)
             
-            # Assume last column is the label, rest are features
-            X = data.iloc[:, :-1].values
-            y = data.iloc[:, -1].values
+            # Select only numeric landmark features (columns 4-66: landmark_0 to landmark_62)
+            landmark_columns = [col for col in data.columns if col.startswith('landmark_')]
+            X = data[landmark_columns].values
+            
+            # Convert all gestures to strings for consistency
+            y = data['gesture'].astype(str).values
             
             print(f"✅ Data loaded: {X.shape[0]} samples, {X.shape[1]} features")
-            print(f"📊 Classes: {len(np.unique(y))}")
+            unique_classes = np.unique(y)
+            self.num_classes = len(unique_classes)
+            print(f"📊 Classes: {self.num_classes}")
+            print(f"📋 Class list: {sorted(unique_classes)}")
             
             # Encode labels
             y_encoded = self.label_encoder.fit_transform(y)
@@ -126,6 +132,9 @@ class CNNTrainer:
         Returns:
             Compiled Keras model
         """
+        if self.num_classes is None:
+            raise ValueError("Number of classes not determined. Please load data first.")
+            
         model = keras.Sequential([
             # Input layer
             keras.layers.Dense(256, activation='relu', input_shape=self.input_shape),

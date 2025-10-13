@@ -4,6 +4,7 @@
 body {
     background-color: #f8f9fa;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.4;
 }
 
 /* Video Container */
@@ -162,35 +163,76 @@ body {
 /* Word Suggestions */
 #suggestions {
     min-height: 50px;
+    padding: 10px;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+    border-radius: 10px;
+    border: 1px solid rgba(102, 126, 234, 0.1);
 }
 
 .suggestion-btn {
     background: linear-gradient(135deg, #667eea, #764ba2);
     border: none;
     color: white;
-    padding: 8px 16px;
-    border-radius: 20px;
-    font-size: 0.9em;
+    padding: 10px 20px;
+    border-radius: 25px;
+    font-size: 1em;
+    font-weight: bold;
     cursor: pointer;
     transition: all 0.3s ease;
+    margin: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
 }
 
 .suggestion-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+    transform: scale(1.1);
+    box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
+    background: linear-gradient(135deg, #5a6fd8, #6a4190);
 }
 
-/* Performance Metrics */
+.suggestion-btn:active {
+    transform: scale(0.95);
+}
+
+/* Performance Metrics - Enhanced */
 .metric {
-    padding: 15px;
+    padding: 8px;
     text-align: center;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+    border-radius: 10px;
+    margin: 3px;
+    transition: transform 0.2s ease;
+}
+
+.metric:hover {
+    transform: translateY(-3px);
+}
+
+.metric-icon {
+    font-size: 1.5em;
+    opacity: 0.8;
 }
 
 .metric-value {
-    font-size: 1.8em;
+    font-size: 2em;
     font-weight: bold;
     color: #667eea;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    margin: 5px 0;
+}
+
+/* Color classes for metrics (set by JS) */
+.metric-value.good {
+    color: #28a745;
+}
+
+.metric-value.warning {
+    color: #ffc107;
+}
+
+.metric-value.danger {
+    color: #dc3545;
 }
 
 .metric-label {
@@ -202,7 +244,14 @@ body {
     margin-top: 5px;
 }
 
-/* Gesture Classes */
+/* Performance row */
+.performance-row {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 10px;
+    padding: 10px;
+}
+
+/* Gesture Classes - Removed, but styles kept for reference if needed */
 .gesture-classes {
     max-height: 300px;
     overflow-y: auto;
@@ -278,7 +327,16 @@ footer {
     }
     
     .metric-value {
-        font-size: 1.4em;
+        font-size: 1.6em;
+    }
+    
+    .metric {
+        margin-bottom: 10px;
+    }
+    
+    .row > div.col-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
     }
     
     .gesture-grid {
@@ -330,6 +388,137 @@ footer {
     background: linear-gradient(135deg, #5a6fd8, #6a4190);
 }
 
+/* Gesture Learning Panel */
+.gesture-learning-container {
+    padding: 10px;
+}
+
+.current-gesture-display {
+    border: 2px solid #e9ecef;
+    border-radius: 15px;
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa, #ffffff);
+}
+
+.gesture-image-container {
+    width: 150px;
+    height: 150px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 15px;
+    background: white;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.gesture-image-container:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.gesture-image {
+    max-width: 130px;
+    max-height: 130px;
+    border-radius: 10px;
+    transition: all 0.3s ease;
+}
+
+.gesture-info h6 {
+    color: #667eea;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.gesture-info p {
+    font-size: 0.9em;
+    margin-bottom: 0;
+}
+
+.gesture-reference {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+
+.gesture-reference h6 {
+    color: #6c757d;
+    font-weight: 600;
+}
+
+.gesture-thumbnails {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.thumbnail-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+    margin-top: 8px;
+}
+
+.gesture-thumbnail {
+    width: 25px;
+    height: 25px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid #dee2e6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+    font-size: 0.7em;
+    font-weight: bold;
+    color: #667eea;
+}
+
+.gesture-thumbnail:hover {
+    transform: scale(1.2);
+    border-color: #667eea;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+    z-index: 10;
+}
+
+.gesture-thumbnail.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-color: #667eea;
+}
+
+.alphabet-thumbnails, .number-thumbnails {
+    margin-bottom: 10px;
+}
+
+.alphabet-thumbnails small, .number-thumbnails small {
+    font-weight: 600;
+    color: #6c757d;
+}
+
+/* Animation for gesture image updates */
+.gesture-image-update {
+    animation: gestureUpdate 0.5s ease-in-out;
+}
+
+@keyframes gestureUpdate {
+    0% { 
+        opacity: 0.7;
+        transform: scale(0.9);
+    }
+    50% { 
+        opacity: 1;
+        transform: scale(1.05);
+    }
+    100% { 
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
 /* Dark mode support */
 @media (prefers-color-scheme: dark) {
     body {
@@ -346,5 +535,24 @@ footer {
         background-color: #1a1a1a;
         color: #ffffff;
         border-color: #444;
+    }
+    
+    .current-gesture-display {
+        background: linear-gradient(135deg, #2d2d2d, #3d3d3d);
+        border-color: #444;
+    }
+    
+    .gesture-thumbnails {
+        background: #2d2d2d;
+    }
+    
+    .gesture-thumbnail {
+        background: #3d3d3d;
+        border-color: #555;
+        color: #ffffff;
+    }
+    
+    .metric {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
     }
 }

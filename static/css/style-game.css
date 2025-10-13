@@ -1,0 +1,200 @@
+/* ISL Gesture Recognition System - Game Mode Custom Styles */
+
+/* Game Title/Header Style */
+.text-game-title {
+    background-image: linear-gradient(45deg, #ff7e5f, #feb47b); /* Warm gradient */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 800;
+    font-size: 1.8rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.text-game-level {
+    color: #4CAF50; /* Success/Level Green */
+    font-weight: 700;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Card Styling for Learning Panels (Neon/Dark Theme) */
+.card-neon {
+    background: linear-gradient(135deg, #1e1e1e, #333333); /* Dark gradient background */
+    border: 2px solid #667eea; /* Primary border color */
+    border-radius: 20px;
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.5); /* Neon glow effect */
+}
+
+/* Character Display Box */
+.sign-display-box {
+    border: 3px solid #6cff87; /* Bright green for current sign */
+    border-radius: 10px;
+    padding: 20px;
+    background-color: #0d0d0d;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.3s ease;
+}
+
+.sign-display-box:hover {
+    transform: scale(1.05);
+}
+
+/* Gradient Text for the Character */
+.text-gradient {
+    background-image: linear-gradient(90deg, #6cff87, #00c6ff); /* Neon Green/Blue */
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 5rem !important;
+    text-shadow: 0 0 10px rgba(108, 255, 135, 0.5);
+}
+
+/* Gesture Image Placeholder */
+.gesture-image-placeholder {
+    max-height: 250px;
+    width: auto;
+    border: 5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    transition: box-shadow 0.3s ease;
+}
+
+.gesture-image-placeholder:hover {
+    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+}
+
+/* Game Card Links (on learn.html) */
+.game-card-link {
+    text-decoration: none !important;
+    color: inherit;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.game-card-link:hover .game-card {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.game-card {
+    border-radius: 15px;
+    transition: all 0.2s;
+}
+
+.list-group-game .list-group-item {
+    background-color: #2d2d2d;
+    color: #fff;
+    border-color: #333;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.list-group-game .list-group-item:hover {
+    background-color: #444;
+}
+
+.list-group-game .list-group-item.active {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.list-group-game .list-group-item.disabled {
+    cursor: not-allowed;
+    background-color: #1a1a1a;
+    color: #555;
+}
+
+/* New animations for feedback and interactions */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes glow {
+    0% { box-shadow: 0 0 5px rgba(108, 255, 135, 0.5); }
+    50% { box-shadow: 0 0 20px rgba(108, 255, 135, 0.8); }
+    100% { box-shadow: 0 0 5px rgba(108, 255, 135, 0.5); }
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.sign-display-box:hover {
+    animation: glow 2s infinite;
+}
+
+.gesture-image-placeholder:hover {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.btn:hover {
+    animation: glow 1s infinite;
+}
+
+.feedback-error {
+    animation: shake 0.5s ease-in-out;
+}
+
+.feedback-success {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Success animation for level completion */
+@keyframes confetti {
+    0% { transform: rotate(0deg) scale(1); opacity: 1; }
+    50% { transform: rotate(180deg) scale(1.2); opacity: 0.8; }
+    100% { transform: rotate(360deg) scale(1); opacity: 1; }
+}
+
+@keyframes bounce {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+    40% { transform: translateY(-10px); }
+    60% { transform: translateY(-5px); }
+}
+
+.success-animation {
+    animation: confetti 2s ease-in-out, bounce 1s ease-in-out;
+}
+
+.quiz-mode-active .gesture-image-placeholder {
+    opacity: 0.3;
+    filter: blur(5px);
+}
+
+.quiz-mode-active .gesture-image-placeholder::after {
+    content: "No Hints!";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    color: #ff6b6b;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Enhanced hover effects */
+.card-game-link:hover .card {
+    transform: translateY(-10px) rotate(1deg);
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+}
+
+.list-group-game .list-group-item:hover {
+    background-color: #555;
+    transform: scale(1.05);
+    transition: all 0.2s ease;
+}
+
+.sign-display-box:hover {
+    animation: glow 2s infinite, bounce 1s ease-in-out;
+}
+
+.gesture-image-placeholder:hover {
+    animation: fadeIn 0.5s ease-in-out, glow 1s infinite;
+}
+
+.btn:hover {
+    animation: glow 1s infinite, bounce 0.5s ease-in-out;
+}

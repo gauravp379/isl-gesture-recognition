@@ -141,6 +141,273 @@ class NLPProcessor:
         # Process the buffer to form words and sentences
         return self._process_buffer()
     
+    def process_gesture_sequence(self, gestures: List[str], current_sentence: str) -> str:
+        """
+        Process a sequence of gestures with improved word boundary detection
+
+        Args:
+            gestures: List of recent gesture characters
+            current_sentence: Current sentence being built
+
+        Returns:
+            Updated sentence string
+        """
+        if not gestures:
+            return current_sentence
+
+        current_time = time.time()
+
+        # Filter gestures - remove duplicates and invalid ones
+        filtered_gestures = self._filter_gestures(gestures)
+
+        if not filtered_gestures:
+            return current_sentence
+
+        # Take only the last unique gesture to avoid repetition
+        last_gesture = filtered_gestures[-1]
+
+        # Check if this is a new gesture (different from last one)
+        if (not self.gesture_buffer or
+            self.gesture_buffer[-1]['character'] != last_gesture.upper() or
+            current_time - self.gesture_buffer[-1]['timestamp'] > 1.0):
+
+            # Add the new gesture
+            self.gesture_buffer.append({
+                'character': last_gesture.upper(),
+                'timestamp': current_time
+            })
+
+            # Update last gesture time
+            self.last_gesture_time = current_time
+
+        # Handle special '+' symbol for spaces
+        if last_gesture.upper() == '+':
+            # Add space when '+' is detected
+            updated_sentence = current_sentence.rstrip() + ' '
+        else:
+            # Append the new gesture character WITHOUT space between letters
+            updated_sentence = current_sentence + last_gesture.upper()
+
+        # Now try to complete the last partial word
+        completed = self._try_complete_last_word(updated_sentence)
+        if completed:
+            updated_sentence = completed
+
+        # Clear buffer after processing to start new word
+        self.gesture_buffer.clear()
+
+        print(f"💬 Appended gesture '{last_gesture}' -> Sentence: {updated_sentence}")
+        return updated_sentence
+    
+    def _filter_gestures(self, gestures: List[str]) -> List[str]:
+        """
+        Filter gestures to remove noise and duplicates
+        
+        Args:
+            gestures: Raw gesture list
+            
+        Returns:
+            Filtered gesture list
+        """
+        if not gestures:
+            return []
+        
+        filtered = []
+        last_gesture = None
+        
+        for gesture in gestures:
+            # Clean and validate gesture
+            clean_gesture = gesture.strip().upper()
+            if (clean_gesture and 
+                clean_gesture.isalpha() and 
+                len(clean_gesture) == 1 and
+                clean_gesture != last_gesture):
+                filtered.append(clean_gesture)
+                last_gesture = clean_gesture
+        
+        return filtered
+    
+    def _build_intelligent_sentence(self, current_sentence: str) -> str:
+        """
+        Build sentence with intelligent word boundary detection
+        
+        Args:
+            current_sentence: Current sentence being built
+            
+        Returns:
+            Updated sentence
+        """
+        if not self.gesture_buffer:
+            return current_sentence
+        
+        # Get recent gestures (last 6 characters for better word detection)
+        recent_gestures = list(self.gesture_buffer)[-6:]
+        current_word = ''.join([g['character'] for g in recent_gestures])
+        
+        # Check if we can form a complete word
+        completed_word = self._try_complete_word(current_word)
+        
+        if completed_word:
+            # Add word to sentence
+            words = current_sentence.split() if current_sentence else []
+            
+            # Avoid duplicate words
+            if not words or words[-1] != completed_word:
+                words.append(completed_word)
+                
+                # Clear gesture buffer after forming a word
+                self.gesture_buffer.clear()
+                
+                print(f"💬 Completed word: {completed_word}")
+                return ' '.join(words)
+        
+        # For partial words, show current progress but don't add random letters
+        if len(current_word) >= 2 and len(current_word) <= 4:
+            # Check if this looks like the start of a valid word
+            if self._is_valid_word_start(current_word):
+                # Show current progress for short partial words
+                return current_sentence + (f' {current_word}' if current_sentence else current_word)
+        
+        # Only show meaningful content, avoid random single characters
+        if len(current_word) == 1 and current_sentence:
+            return current_sentence
+        
+        return current_sentence
+    
+    def _try_complete_last_word(self, sentence: str) -> Optional[str]:
+        """
+        Try to complete the last partial word in the sentence
+        
+        Args:
+            sentence: Current sentence with possible partial word at end
+            
+        Returns:
+            Updated sentence with completed word or original
+        """
+        if not sentence:
+            return None
+        
+        words = sentence.split()
+        if len(words) == 0:
+            return sentence
+        
+        last_word = words[-1]
+        if len(last_word) < 2:
+            return sentence  # Too short to complete
+        
+        completed_word = self._try_complete_word(last_word)
+        if completed_word:
+            words[-1] = completed_word
+            return ' '.join(words)
+        
+        return sentence
+    
+    def _try_complete_word(self, partial_word: str) -> Optional[str]:
+        """
+        Try to complete a word with improved logic - more conservative approach
+        
+        Args:
+            partial_word: Partial word to complete
+            
+        Returns:
+            Completed word or None
+        """
+        if not partial_word or len(partial_word) < 2:
+            return None
+        
+        partial_upper = partial_word.upper()
+        
+        # Check exact matches first (complete words)
+        if partial_upper in self.common_words or partial_upper in self.isl_words:
+            return partial_upper
+        
+        # Only return short words if they are complete and well-known
+        if len(partial_upper) == 2:
+            short_words = {'AM', 'IS', 'MY', 'GO', 'NO', 'UP', 'WE', 'HE', 'ME', 'DO', 'TO', 'IN', 'ON', 'AT', 'OF', 'OR', 'AS', 'BE', 'BY'}
+            if partial_upper in short_words:
+                return partial_upper
+        
+        # For 3+ character words, only complete if we have high confidence
+        if len(partial_upper) >= 3:
+            # Very high confidence matches - only complete common gestures/words
+            high_confidence_patterns = {
+                'HEL': 'HELLO',
+                'HEA': 'HELLO',  # Common misrecognition
+                'THA': 'THANK',
+                'THN': 'THANK',  # Common misrecognition
+                'PLE': 'PLEASE',
+                'PLZ': 'PLEASE', # Common abbreviation
+                'WAN': 'WANT',
+                'NEE': 'NEED',
+                'GOO': 'GOOD',
+                'GUD': 'GOOD',   # Common misrecognition
+                'WAT': 'WATER',
+                'WTR': 'WATER',  # Common abbreviation
+                'FOO': 'FOOD',
+                'WOR': 'WORK',
+                'WRK': 'WORK',   # Common abbreviation
+                'HOM': 'HOME',
+                'SOR': 'SORRY',
+                'SRY': 'SORRY',  # Common abbreviation
+                'YES': 'YES'
+            }
+            
+            # Only return if exact match in high confidence patterns
+            if partial_upper in high_confidence_patterns:
+                return high_confidence_patterns[partial_upper]
+            
+            # For 4+ characters, try to match against known words more selectively
+            if len(partial_upper) >= 4:
+                # Check for near-complete words (90% or more of common words)
+                all_words = list(self.common_words) + list(self.isl_words)
+                for word in all_words:
+                    if len(word) <= len(partial_upper) + 2:  # Only if close to complete
+                        if word.startswith(partial_upper) and len(partial_upper) >= len(word) * 0.75:
+                            return word
+        
+        return None
+    
+    def _is_valid_word_start(self, partial_word: str) -> bool:
+        """
+        Check if a partial word looks like the start of a valid word
+        
+        Args:
+            partial_word: Partial word to validate
+            
+        Returns:
+            True if it looks like a valid word start
+        """
+        if not partial_word or len(partial_word) < 2:
+            return False
+        
+        partial_upper = partial_word.upper()
+        
+        # Check against common word prefixes
+        valid_prefixes = {
+            'TH', 'HE', 'IN', 'ER', 'AN', 'RE', 'ED', 'ND', 'ON', 'EN', 'AT', 'OU',
+            'IT', 'ES', 'OR', 'TE', 'OF', 'BE', 'TO', 'AR', 'TI', 'AS', 'IS', 'NG',
+            'AL', 'WA', 'CO', 'DE', 'ST', 'MA', 'SE', 'WH', 'ME', 'GO', 'SH', 'WO',
+            'PL', 'CAN', 'WIL', 'YOU', 'THI', 'WIT', 'FO', 'WER', 'HAV', 'HIS'
+        }
+        
+        # Check if it starts with a valid prefix
+        for prefix in valid_prefixes:
+            if partial_upper.startswith(prefix[:len(partial_upper)]):
+                return True
+        
+        # Check against our word patterns
+        for pattern in self.word_patterns.keys():
+            if partial_upper.startswith(pattern[:len(partial_upper)]):
+                return True
+                
+        # Check if it's the start of any common or ISL word
+        all_words = list(self.common_words) + list(self.isl_words)
+        for word in all_words:
+            if word.startswith(partial_upper):
+                return True
+        
+        return False
+    
     def _process_buffer(self) -> str:
         """
         Process the gesture buffer to form meaningful text
@@ -314,7 +581,7 @@ class NLPProcessor:
         
         return ' '.join(sentence_words)
     
-    def get_word_suggestions(self, partial_text: str, count: int = 5) -> List[str]:
+    def get_suggestions(self, partial_text: str, count: int = 5) -> List[str]:
         """
         Get word suggestions based on partial text
         

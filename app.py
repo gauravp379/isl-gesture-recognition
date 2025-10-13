@@ -30,6 +30,25 @@ tts_handler = TTSHandler()
 nlp_processor = NLPProcessor()
 performance_monitor = PerformanceMonitor()
 
+# Initialize gesture recognizer immediately
+print("🚀 Initializing ISL Gesture Recognition System...")
+try:
+    # Pass model path and configuration to gesture recognizer
+    model_config = {
+        'MAX_NUM_HANDS': config['development'].MAX_NUM_HANDS,
+        'HAND_DETECTION_CONFIDENCE': config['development'].HAND_DETECTION_CONFIDENCE,
+        'HAND_TRACKING_CONFIDENCE': config['development'].HAND_TRACKING_CONFIDENCE
+    }
+    
+    gesture_recognizer = GestureRecognizer(
+        model_path=config['development'].CNN_MODEL_PATH,
+        config=model_config
+    )
+    print("✅ Gesture recognizer initialized successfully")
+except Exception as e:
+    print(f"❌ Error initializing gesture recognizer: {e}")
+    gesture_recognizer = None
+
 # Global variables for video streaming
 camera = None
 output_frame = None
@@ -37,15 +56,14 @@ lock = Thread()
 gesture_queue = queue.Queue()
 current_sentence = ""
 
-def initialize_components():
-    """Initialize all system components"""
-    global gesture_recognizer
-    try:
-        gesture_recognizer = GestureRecognizer()
-        print("✅ Gesture recognizer initialized successfully")
-    except Exception as e:
-        print(f"❌ Error initializing gesture recognizer: {e}")
-        gesture_recognizer = None
+# Global variables for real-time gesture data
+current_gesture = ""
+current_confidence = 0.0
+current_hand_count = 0
+last_detection_time = 0
+last_gesture_time = 0
+GESTURE_CAPTURE_INTERVAL = 2.0  # Capture gesture every 2 seconds
+
 
 def get_camera():
     """Initialize and return camera object"""
@@ -59,15 +77,25 @@ def get_camera():
 
 def generate_frames():
     """Generate video frames with gesture recognition"""
-    global output_frame, current_sentence
+    global output_frame, current_sentence, current_gesture, current_confidence, current_hand_count, last_gesture_time
+    
+    print(f"📹 Starting video stream generation...")
+    print(f"🤖 Gesture recognizer status: {'Loaded' if gesture_recognizer else 'Not loaded'}")
+    print(f"⏰ Gesture capture interval: {GESTURE_CAPTURE_INTERVAL} seconds")
     
     camera = get_camera()
+    if not camera.isOpened():
+        print("❌ Camera failed to open")
+        return
+    
     frame_count = 0
     start_time = time.time()
+    fps = 0
     
     while True:
         success, frame = camera.read()
         if not success:
+            print("❌ Failed to read camera frame")
             break
             
         # Flip frame horizontally for mirror effect
@@ -75,31 +103,69 @@ def generate_frames():
         
         # Perform gesture recognition
         try:
+            current_time = time.time()
             if gesture_recognizer:
                 result = gesture_recognizer.predict(frame)
                 
                 if result:
                     # Draw hand landmarks and predictions
-                    frame = gesture_recognizer.draw_landmarks(frame)
+                    landmarks_data = result.get('landmarks_data')
+                    frame = gesture_recognizer.draw_landmarks(frame, landmarks_data)
                     
-                    # Display prediction
+                    # Get prediction data
                     gesture = result.get('gesture', '')
                     confidence = result.get('confidence', 0.0)
+                    hand_count = result.get('hand_count', 0)
                     
-                    if confidence > app.config['CONFIDENCE_THRESHOLD']:
-                        # Add recognized gesture to queue
-                        gesture_queue.put(gesture)
-                        
-                        # Update current sentence
-                        current_sentence = process_gesture_sequence()
-                        
-                        # Display on frame
-                        cv2.putText(frame, f"Gesture: {gesture}", (10, 30),
-                                  cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                        cv2.putText(frame, f"Confidence: {confidence:.2f}", (10, 70),
-                                  cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-                        cv2.putText(frame, f"Sentence: {current_sentence}", (10, 110),
-                                  cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
+                    # Update real-time global variables (for display purposes)
+                    current_gesture = gesture
+                    current_confidence = confidence
+                    current_hand_count = hand_count
+                    
+                    # Always show detection info
+                    cv2.putText(frame, f"Hands: {hand_count}", (10, 30),
+                              cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
+                    cv2.putText(frame, f"Gesture: {gesture}", (10, 60),
+                              cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                    cv2.putText(frame, f"Confidence: {confidence:.2f}", (10, 90),
+                              cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
+                    
+                    # Check if it's time to capture a gesture (every 2 seconds)
+                    if (current_time - last_gesture_time) >= GESTURE_CAPTURE_INTERVAL:
+                        # Only capture if hands are detected and confidence is high enough
+                        if hand_count > 0 and confidence > app.config['CONFIDENCE_THRESHOLD']:
+                            # Add recognized gesture to queue
+                            gesture_queue.put(gesture)
+
+                            # Update current sentence (only add to sentence, don't output yet)
+                            global current_sentence
+                            current_sentence = nlp_processor.process_gesture_sequence([gesture], current_sentence)
+
+                            # Don't speak immediately - wait for capture interval to complete
+
+                            # Update last gesture time
+                            last_gesture_time = current_time
+
+                            print(f"✅ Captured gesture '{gesture}' with confidence {confidence:.2f}")
+                    
+                    # Display sentence
+                    cv2.putText(frame, f"Sentence: {current_sentence}", (10, 120),
+                              cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 0), 2)
+                    
+                    # Show next capture countdown
+                    next_capture_time = GESTURE_CAPTURE_INTERVAL - (current_time - last_gesture_time)
+                    if next_capture_time > 0:
+                        cv2.putText(frame, f"Next capture: {next_capture_time:.1f}s", (10, 150),
+                                  cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+                else:
+                    # Show "No hands detected" when no result
+                    cv2.putText(frame, "No hands detected", (10, 30),
+                              cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                    
+                    # Reset real-time variables when no hands detected
+                    current_gesture = ""
+                    current_confidence = 0.0
+                    current_hand_count = 0
                 
         except Exception as e:
             print(f"Error in gesture recognition: {e}")
@@ -132,15 +198,37 @@ def process_gesture_sequence():
         gestures.append(gesture_queue.get())
     
     if gestures:
-        # Use NLP processor to form sentences
-        return nlp_processor.process_gestures(gestures[-10:])  # Last 10 gestures
+        # Process gestures using NLP processor with intelligent sentence building
+        # Only process the last unique gesture to avoid repetition
+        if len(gestures) > 0:
+            # Take only the most recent gesture
+            latest_gesture = gestures[-1]
+            global current_sentence
+            current_sentence = nlp_processor.process_gesture_sequence([latest_gesture], current_sentence)
+            return current_sentence
+    
     return current_sentence
 
 @app.route('/')
 def index():
     """Main dashboard route"""
-    return render_template('index.html', 
+    return render_template('index.html',
                          gesture_classes=app.config['GESTURE_CLASSES'])
+
+@app.route('/learn')
+def learn():
+    """Learn mode route"""
+    return render_template('learn.html')
+
+@app.route('/alphabet-game')
+def alphabet_game():
+    """Alphabet game route"""
+    return render_template('alphabet_game.html')
+
+@app.route('/numbers-game')
+def numbers_game():
+    """Numbers game route"""
+    return render_template('numbers_game.html')
 
 @app.route('/video_feed')
 def video_feed():
@@ -154,11 +242,47 @@ def get_gesture_data():
     try:
         data = {
             'current_sentence': current_sentence,
+            'current_gesture': current_gesture,
+            'confidence': current_confidence,
+            'hand_count': current_hand_count,
             'fps': performance_monitor.get_current_fps(),
-            'confidence': 0.0,
+            'last_detection_time': last_detection_time,
             'timestamp': time.time()
         }
         return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/suggestions', methods=['POST'])
+def get_suggestions():
+    """API endpoint for word suggestions"""
+    try:
+        data = request.get_json()
+        text = data.get('text', '')
+        
+        suggestions = nlp_processor.get_suggestions(text)
+        
+        return jsonify({
+            'suggestions': suggestions,
+            'text': text
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/update_sentence', methods=['POST'])
+def update_sentence():
+    """API endpoint to update current sentence from frontend"""
+    try:
+        data = request.get_json()
+        global current_sentence
+        current_sentence = data.get('sentence', '')
+        
+        # Clear gesture queue and buffers
+        while not gesture_queue.empty():
+            gesture_queue.get()
+        nlp_processor.clear_buffers()
+        
+        return jsonify({'success': True, 'sentence': current_sentence})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -168,14 +292,50 @@ def speak_text():
     try:
         data = request.get_json()
         text = data.get('text', current_sentence)
-        
-        if text:
-            success = tts_handler.speak(text)
+
+        if text and text.strip():
+            print(f"🗣️ Speaking text: '{text}'")
+            print(f"🔊 TTS Handler available: {tts_handler.is_available()}")
+            print(f"🔊 TTS Engine type: {tts_handler.engine_type}")
+            success = tts_handler.speak(text.strip())
+            print(f"✅ TTS result: {success}")
             return jsonify({'success': success, 'text': text})
         else:
+            print("⚠️ No text provided for TTS")
             return jsonify({'error': 'No text to speak'}), 400
-            
+
     except Exception as e:
+        print(f"❌ TTS Error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/translate', methods=['POST'])
+def translate_text():
+    """API endpoint for text translation to Hindi"""
+    try:
+        data = request.get_json()
+        text = data.get('text', current_sentence)
+
+        if text and text.strip():
+            # Simple translation using Google Translate API (you might need to install googletrans)
+            try:
+                from googletrans import Translator
+                translator = Translator()
+                translation = translator.translate(text.strip(), src='en', dest='hi')
+                hindi_text = translation.text
+                print(f"🔄 Translated '{text}' to Hindi: '{hindi_text}'")
+                return jsonify({'success': True, 'original': text, 'translated': hindi_text})
+            except ImportError:
+                # Fallback: return original text with note
+                print("⚠️ googletrans not installed, returning original text")
+                return jsonify({'success': False, 'error': 'Translation service not available', 'original': text})
+            except Exception as trans_error:
+                print(f"⚠️ Translation error: {trans_error}")
+                return jsonify({'success': False, 'error': 'Translation failed', 'original': text})
+        else:
+            return jsonify({'error': 'No text to translate'}), 400
+
+    except Exception as e:
+        print(f"❌ Translation Error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/clear_sentence', methods=['POST'])
@@ -187,6 +347,9 @@ def clear_sentence():
     # Clear gesture queue
     while not gesture_queue.empty():
         gesture_queue.get()
+    
+    # Clear NLP processor buffers
+    nlp_processor.clear_buffers()
     
     return jsonify({'success': True, 'message': 'Sentence cleared'})
 
@@ -231,6 +394,28 @@ def health_check():
     }
     return jsonify(status)
 
+@app.route('/debug')
+def debug_info():
+    """Debug information endpoint"""
+    debug_data = {
+        'gesture_recognizer_loaded': gesture_recognizer is not None,
+        'camera_initialized': camera is not None,
+        'model_path': app.config['CNN_MODEL_PATH'],
+        'confidence_threshold': app.config['CONFIDENCE_THRESHOLD'],
+        'hand_detection_confidence': app.config['HAND_DETECTION_CONFIDENCE'],
+        'hand_tracking_confidence': app.config['HAND_TRACKING_CONFIDENCE'],
+        'camera_index': app.config['CAMERA_INDEX']
+    }
+    
+    if gesture_recognizer:
+        try:
+            model_info = gesture_recognizer.get_model_info()
+            debug_data['model_info'] = model_info
+        except Exception as e:
+            debug_data['model_error'] = str(e)
+    
+    return jsonify(debug_data)
+
 @app.errorhandler(404)
 def not_found_error(error):
     return render_template('errors/404.html'), 404
@@ -246,8 +431,6 @@ if __name__ == '__main__':
     os.makedirs('logs', exist_ok=True)
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
-    # Initialize components
-    initialize_components()
     
     print(f"📹 Camera index: {app.config['CAMERA_INDEX']}")
     print(f"🎯 Confidence threshold: {app.config['CONFIDENCE_THRESHOLD']}")
