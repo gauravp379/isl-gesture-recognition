@@ -96,7 +96,7 @@ isl-gesture-recognition/
 
 ## 🧠 Model Training
 
-if Dataset is not thir download any dataset from kaggle or any other website.
+If Dataset is not their, download any dataset from kaggle or any other website and train it .
 
 Train custom models using `src/models/train_cnn.py` with prepared datasets in `data/`.
 
