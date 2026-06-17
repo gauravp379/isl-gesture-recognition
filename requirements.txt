@@ -4,7 +4,7 @@ Flask-CORS==4.0.0
 
 # Computer Vision & Image Processing
 opencv-python==4.8.1.78
-mediapipe==0.10.7
+mediapipe==0.10.21
 
 # Machine Learning & Deep Learning
 tensorflow==2.13.0
